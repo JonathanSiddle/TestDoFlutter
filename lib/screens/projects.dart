@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:testdo/model/project.dart';
+import 'package:testdo/screens/projectToDoLists.dart';
 import 'package:testdo/util/dbhelper.dart';
 
 class ProjectList extends StatefulWidget {
@@ -73,8 +74,17 @@ class ProjectListState extends State {
               title: Text(this.projects[position].name),
               onTap: () {
                 print('Hit Project $position');
+                Navigator.push(context, MaterialPageRoute(builder: (context) {
+                  return new Scaffold(
+                    appBar: AppBar(
+                      title: new Text(this.projects[position].name)
+                    ),
+                    body: ProjectToDoLists(proj: this.projects[position])
+                  );
+                }));
               },
-            ));
+            )
+        );
       },
     );
   }

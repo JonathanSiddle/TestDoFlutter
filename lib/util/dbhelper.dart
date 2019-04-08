@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:testdo/model/project.dart';
 import 'package:testdo/model/todoItem.dart';
+import 'package:testdo/model/todolist.dart';
 
 class DbHelper {
   static final DbHelper _dbHelper = DbHelper._internal();
@@ -46,18 +47,22 @@ class DbHelper {
   }
 
   void _createDb(Database db, int newVersion) async {
+    //Table: Project
     await db.execute(
-        //Table: Project
-        "CREATE TABLE $tblProject($colProjId INTEGER PRIMARY KEY, $colProjName TEXT);" +
-            //Table: ToDoList
-            "CREATE TABLE $tblToDoList($colTdlId INTEGER PRIMARY KEY, $colTdlName TEXT," +
-            "$colTdlProjectId INTEGER," +
-            "FOREIGN KEY($colTdlProjectId) REFERENCES $tblProject($colProjId);" +
-            //Table: ToDoItem
-            "CREATE TABLE $tblToDoItem($colTdiId INTEGER PRIMARY KEY, $colTdiName TEXT, " +
-            "$colTdiComplete INTEGER, $colTdiToDoListId INTEGER," +
-            "FOREIGN KEY($colTdiToDoListId) REFERENCES $tblToDoList($colTdlId)" +
-            ");");
+        "CREATE TABLE $tblProject($colProjId INTEGER PRIMARY KEY, $colProjName TEXT);");
+    //Table: ToDoList
+    await db.execute(
+        "CREATE TABLE $tblToDoList($colTdlId INTEGER PRIMARY KEY,"
+        + "$colTdlName TEXT, $colTdlProjectId INTEGER,"
+        + "CONSTRAINT fk_proj_tdl FOREIGN KEY($colTdlProjectId)"
+        + "REFERENCES $tblProject($colProjId));"
+        );
+    //Table: ToDoItem
+    await db.execute(
+        "CREATE TABLE $tblToDoItem($colTdiId INTEGER PRIMARY KEY, $colTdiName TEXT, "
+            + "$colTdiComplete INTEGER, $colTdiToDoListId INTEGER,"
+            + "CONSTRAINT fk_tdl_tdi FOREIGN KEY($colTdiToDoListId)" 
+            + "REFERENCES $tblToDoList($colTdlId));");
   }
 
   //Query methods
@@ -74,6 +79,20 @@ class DbHelper {
     return result;
   }
 
+  //Item ToDoLists
+  Future<int> insertToDoList(ToDoList toDoList) async {
+    Database db = await this.db;
+    var result = await db.insert(tblToDoList, toDoList.toMap());
+    return result;
+  }
+
+  Future<List> getToDoLists(int pId) async {
+    Database db = await this.db;
+    var result = await db
+        .rawQuery("SELECT * FROM $tblToDoList WHERE $colTdlProjectId = $pId");
+    return result;
+  }
+
   //Item ToDos
   Future<int> insertTodoItem(ToDoItem todo) async {
     Database db = await this.db;
@@ -81,10 +100,10 @@ class DbHelper {
     return result; //if 0 something went wrong
   }
 
-  Future<List> getToDos() async {
+  Future<List> getToDos(int tdlId) async {
     Database db = await this.db;
     var result = await db
-        .rawQuery("SELECT * FROM $tblToDoItem"); //possibly need ordering
+        .rawQuery("SELECT * FROM $tblToDoItem WHERE $colTdiToDoListId = $tdlId"); //possibly need ordering
     return result;
   }
 

@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:testdo/model/todoItem.dart';
+import 'package:testdo/model/todolist.dart';
 import 'package:testdo/util/dbhelper.dart';
 
-class ToDoList extends StatefulWidget {
+class ToDoItems extends StatefulWidget {
+  final ToDoList tdl;
+
+  ToDoItems({Key key, @required this.tdl}) : super(key: key);
+
   @override
-  State<StatefulWidget> createState() => ToDoListState();
+  State<StatefulWidget> createState() => ToDoItemState(tdl);
 }
 
-class ToDoListState extends State {
+class ToDoItemState extends State {
+  final ToDoList tdl;
   DbHelper helper = DbHelper();
+  TextEditingController _c = new TextEditingController();
   List<ToDoItem> todos;
   int count;
+
+  ToDoItemState(this.tdl);
 
   @override
   Widget build(BuildContext context) {
@@ -18,26 +27,62 @@ class ToDoListState extends State {
       todos = List<ToDoItem>();
       getData();
     }
-    return Scaffold(
-      body: todos.length == 0
+    return Scaffold(body: getBody()
+        //getBody(),
+        // floatingActionButton: FloatingActionButton(
+        //     onPressed: () {
+        //       print("Hit action button!! Woop woop!");
+        //       helper.initializeDb();
+
+        //       ToDoItem td1 = new ToDoItem("Buy stuff", 1, false);
+        //       ToDoItem td2 = new ToDoItem("Sell other stuff", 1, false);
+
+        //       var result = helper.insertTodoItem(td1);
+        //       var result2 = helper.insertTodoItem(td2);
+        //       // print("Results $result, $result2");
+        //       getData();
+        //     },
+        //     tooltip: "Add new ToDO",
+        //     child: Icon(Icons.add)),
+        );
+  }
+
+  Widget getBody() {
+    return Column(children: <Widget>[
+      topComponent(),
+      todos.length == 0
           ? Center(child: Text('Add some ToDo Items!'))
-          : todoListItems(),
-      floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            print("Hit action button!! Woop woop!");
-            helper.initializeDb();
+          : Expanded(child: todoListItems())
+    ]);
+  }
 
-            ToDoItem td1 = new ToDoItem("Buy stuff", 1, false);
-            ToDoItem td2 = new ToDoItem("Sell other stuff", 1, false);
-
-            var result = helper.insertTodoItem(td1);
-            var result2 = helper.insertTodoItem(td2);
-            // print("Results $result, $result2");
-            getData();
-          },
-          tooltip: "Add new ToDO",
-          child: Icon(Icons.add)),
-    );
+  Widget topComponent() {
+    return Row(children: <Widget>[
+      Expanded(
+        child: Padding(
+          padding: EdgeInsets.all(5.0),
+          child: TextField(
+            controller: _c,
+            decoration: InputDecoration(
+                labelText: 'ToDo Item',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5.0))),
+          ),
+        ),
+      ),
+      Container(width: 5.0 * 5),
+      Expanded(
+          child: Padding(
+              padding: EdgeInsets.all(5.0),
+              child: RaisedButton(
+                  color: Theme.of(context).primaryColor,
+                  child: Text('Add'),
+                  onPressed: () {
+                    print('Clicked Add button');
+                    //do more validation here
+                    createToDoItem(ToDoItem(_c.text, tdl.id, false));
+                  })))
+    ]);
   }
 
   ListView todoListItems() {
@@ -62,10 +107,20 @@ class ToDoListState extends State {
     );
   }
 
+  void createToDoItem(ToDoItem tdi) {
+    final dbFuture = helper.initializeDb();
+    dbFuture.then((result) {
+      final tdiFuture = helper.insertTodoItem(tdi);
+      tdiFuture.then((tdl) {
+        getData();
+      });
+    });
+  }
+
   void getData() {
     final dbFuture = helper.initializeDb();
     dbFuture.then((result) {
-      final todosFuture = helper.getToDos();
+      final todosFuture = helper.getToDos(tdl.id);
       todosFuture.then((todosResult) {
         List<ToDoItem> todoList = List<ToDoItem>();
         int itemsCount = todosResult.length;
